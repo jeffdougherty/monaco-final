@@ -19,6 +19,9 @@ ACTION_MAP = {
     0: None
 }
 
+DIST_MEAN = 0.5  # Mean of normal distribution
+DIST_SD = 0.25  # SD of normal distribution
+
 FLAPPYBIRD = FlappyBird(width=WIDTH, height=HEIGHT, pipe_gap=GAP)
 
 def normalize(obs):
@@ -53,17 +56,11 @@ def initialize(n_agents=10):
 
     agents = []
 
-    dist_mean = 0.5     #Mean of normal distribution
-    dist_sd = 0.25      #SD of normal distribution
-
     for i in range(n_agents):
-        this_agent = [np.random.normal(dist_mean, dist_sd) for j in range(N_PARAMS)]
+        this_agent = [np.random.normal(DIST_MEAN, DIST_SD) for j in range(N_PARAMS)]
         agents.append(this_agent)
 
     return agents
-
-    #return [np.zeros(N_PARAMS) for _ in range(n_agents)]
-
 
 def fitness(w, seed=SEED, headless=True):
     '''
@@ -105,7 +102,7 @@ def crossover(w1, w2):
     '''
     Generate an offspring from two agents
     '''
-    crossover_pt = random.randint(N_PARAMS)    #Each agent is N_PARAMS long
+    crossover_pt = random.randint(0, N_PARAMS)    #Each agent is N_PARAMS long
 
     for i in range(crossover_pt, N_PARAMS):
         swap = w1[i]
@@ -119,8 +116,17 @@ def mutate(w):
     '''
     Apply random mutations to an agent's genome
     '''
-    # TODO: your mutation logic goes here
-    return ...
+    #Given in assignment p(mutate) should be 0.5
+    #Rather than mess around with floats, just flip a coin
+
+    mut = random.randint(0,1)
+    if mut == 1:        #One means yes, mutate!  Binary joke, ga-harf, ga-harf
+        #First pass at mutation: pick one position in array and randomize.
+        mut_posit = random.randint(0, N_PARAMS)
+        w[mut_posit] = np.random.normal(DIST_MEAN, DIST_SD)
+
+        #Other possibilities: generate small random quantity around mean of 0, add to one/each position
+    return w
 
 
 def train_agent(n_agents=10, n_epochs=100, headless=True):
