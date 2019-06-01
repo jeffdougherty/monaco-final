@@ -62,13 +62,13 @@ def initialize(n_agents=10):
 
     return agents
 
-def fitness(w, seed=SEED, headless=True):
-    '''
+'''def fitness(w, seed=SEED, headless=True):
+   
     Evaluate the fitness of an agent with the game
 
     game is a PLE game
     agent is an agent function
-    '''
+  
     # disable rendering if headless
     if headless:
         display_screen=False
@@ -95,7 +95,12 @@ def fitness(w, seed=SEED, headless=True):
 
         # TODO: your fitness logic goes here
 
-    return agent_score
+    return agent_score'''
+
+def fitness(w, SEED=SEED, headless=True):
+    #Crappy test dummy.  Literally the worst fitness function imaginable.  Yes, I'm talking about you.
+    #fitness function: Why doesn't Daddy LOVE me?
+    return random.randint(1, 100)
 
 
 def crossover(w1, w2):
@@ -109,7 +114,7 @@ def crossover(w1, w2):
         w1[i] = w2[i]
         w2[i] = swap
 
-    return w1, w2
+    return [w1, w2]
 
 
 def mutate(w):
@@ -129,7 +134,7 @@ def mutate(w):
     return w
 
 
-def train_agent(n_agents=10, n_epochs=100, headless=True):
+def train_agent(n_agents=10, n_epochs=1, headless=True):
     '''
     Train a flappy bird using a genetic algorithm
     '''
@@ -144,26 +149,27 @@ def train_agent(n_agents=10, n_epochs=100, headless=True):
         agent_dict = {}
         fit_list = []
         top_2 = []
-        winners = []
+        winners_fitness = []
         for w in population:                        #Want both a way to sort fitness scores and a quick way to find agent associated with that fitness score
             #Note: this approach could have problems if we get agents with identical fitness.  Cross that bridge if we come to it.
             w_fit = fitness(w, headless=headless)   #Fitness for this agent
             fit_list.append(w_fit)
             agent_dict[w_fit] = w
-        fit_list.sort()                             #Put fitness list in order
+        fit_list.sort(reverse=True)                             #Put fitness list in order
 
-        for i in range(4):                          #Top 4 on list
-            this_agent = agent_dict[fit_list[i]]
-            winners.append(this_agent)
-            if i <= 1:                              #Also track top 2 separately
-                top_2.append(this_agent)
+        for i in range(4):
+            this_fitness = fit_list[i]
+            winners_fitness.append(this_fitness)     #Fitness of top 4 on list
+            if i <= 1:                              #Also track top 2 separately, get actual agents so we can clone and cross
+                top_2.append(agent_dict[this_fitness])
 
         # crossover
-        children = [i for i in top_2]               #Clones of the top 2
-        children.append(crossover(top_2[0], top_2[1]))  #Child of the top 2
+        children = [i for i in top_2]
+        #Clones of the top 2
+        children += crossover(top_2[0], top_2[1])  #Children of the top 2
         for _ in range(4):
-            parents = np.random.choice(winners, 2, False)       #Choose two different winners at random from the top 4
-            children.append(crossover(parents[0], parents[1]))  #Create a child from the two of them
+            parents = np.random.choice(winners_fitness, 2, False)       #Choose two different winners at random from the top 4
+            children += crossover(agent_dict[parents[0]], agent_dict[parents[1]])
 
         # mutation
         children = [mutate(_) for _ in children]
@@ -172,7 +178,7 @@ def train_agent(n_agents=10, n_epochs=100, headless=True):
         population = children
 
     # return the best agent found
-    best_agent = ...
+    best_agent = agent_dict[top_2[0]]       #The top agent of the last generation to undergo fitness evaluation
 
     return best_agent
 
