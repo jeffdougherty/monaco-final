@@ -62,13 +62,13 @@ def initialize(n_agents=10):
 
     return agents
 
-'''def fitness(w, seed=SEED, headless=True):
-   
-    Evaluate the fitness of an agent with the game
+def fitness(w, seed=SEED, headless=False):
+
+    '''Evaluate the fitness of an agent with the game
 
     game is a PLE game
-    agent is an agent function
-  
+    agent is an agent function'''
+
     # disable rendering if headless
     if headless:
         display_screen=False
@@ -94,13 +94,9 @@ def initialize(n_agents=10):
         reward = game.act(ACTION_MAP[action])
 
         # TODO: your fitness logic goes here
+        agent_score = random.randint(1, 100)
 
-    return agent_score'''
-
-def fitness(w, SEED=SEED, headless=True):
-    #Crappy test dummy.  Literally the worst fitness function imaginable.  Yes, I'm talking about you.
-    #fitness function: Why doesn't Daddy LOVE me?
-    return random.randint(1, 100)
+    return agent_score
 
 
 def crossover(w1, w2):
@@ -127,7 +123,7 @@ def mutate(w):
     mut = random.randint(0,1)
     if mut == 1:        #One means yes, mutate!  Binary joke, ga-harf, ga-harf
         #First pass at mutation: pick one position in array and randomize.
-        mut_posit = random.randint(0, N_PARAMS)
+        mut_posit = random.randint(0, N_PARAMS-1)
         w[mut_posit] = np.random.normal(DIST_MEAN, DIST_SD)
 
         #Other possibilities: generate small random quantity around mean of 0, add to one/each position
@@ -143,6 +139,8 @@ def train_agent(n_agents=10, n_epochs=1, headless=True):
 
     # initialization
     population = initialize(n_agents)
+
+    top_2 = []          #Defining here so PyCharm will shut up
 
     for i in range(n_epochs):
         # evaluate fitness
@@ -178,7 +176,7 @@ def train_agent(n_agents=10, n_epochs=1, headless=True):
         population = children
 
     # return the best agent found
-    best_agent = agent_dict[top_2[0]]       #The top agent of the last generation to undergo fitness evaluation
+    best_agent = top_2[0]       #The top agent of the last generation to undergo fitness evaluation
 
     return best_agent
 
