@@ -141,19 +141,35 @@ def train_agent(n_agents=10, n_epochs=100, headless=True):
 
     for i in range(n_epochs):
         # evaluate fitness
-        fits = [fitness(w, headless=headless) for w in population]
+        agent_dict = {}
+        fit_list = []
+        top_2 = []
+        winners = []
+        for w in population:                        #Want both a way to sort fitness scores and a quick way to find agent associated with that fitness score
+            #Note: this approach could have problems if we get agents with identical fitness.  Cross that bridge if we come to it.
+            w_fit = fitness(w, headless=headless)   #Fitness for this agent
+            fit_list.append(w_fit)
+            agent_dict[w_fit] = w
+        fit_list.sort()                             #Put fitness list in order
 
-        # selection
-        winners = ...
+        for i in range(4):                          #Top 4 on list
+            this_agent = agent_dict[fit_list[i]]
+            winners.append(this_agent)
+            if i <= 1:                              #Also track top 2 separately
+                top_2.append(this_agent)
 
         # crossover
-        children = ...
+        children = [i for i in top_2]               #Clones of the top 2
+        children.append(crossover(top_2[0], top_2[1]))  #Child of the top 2
+        for _ in range(4):
+            parents = np.random.choice(winners, 2, False)       #Choose two different winners at random from the top 4
+            children.append(crossover(parents[0], parents[1]))  #Create a child from the two of them
 
         # mutation
-        children = ...
+        children = [mutate(_) for _ in children]
 
         # insertion
-        population = ...
+        population = children
 
     # return the best agent found
     best_agent = ...
