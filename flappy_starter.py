@@ -130,7 +130,7 @@ def mutate(w):
     return w
 
 
-def train_agent(n_agents=10, n_epochs=1, headless=True):
+def train_agent(n_agents=10, n_epochs=100, headless=True):
     '''
     Train a flappy bird using a genetic algorithm
     '''
