@@ -68,7 +68,6 @@ def initialize(n_agents=10):
 def fitness(w, seed=SEED, headless=False):
 
     '''Evaluate the fitness of an agent with the game
-
     game is a PLE game
     agent is an agent function'''
 
@@ -92,17 +91,25 @@ def fitness(w, seed=SEED, headless=False):
         if game.game_over():
             break
 
-        x = normalize(game.getGameState())
+        obs = game.getGameState()
+        x = normalize(obs)
         action = agent(x, w)
 
         reward = game.act(ACTION_MAP[action])
 
         #Score: Pipes traversed * r, see notes
+        # agent_score += 1
+        center = abs(obs['next_pipe_top_y'] - obs['next_pipe_bottom_y'] / 2)
+        target = obs['next_pipe_top_y'] + center
 
-        agent_score += 1                    #Number of frames traveled
-        safe_zone_width = x[3] - x[4]
-        safe_zone_center = safe_zone_width / 2
-        r_vals.append((safe_zone_width - abs(safe_zone_center- x[0])) / safe_zone_width)
+        player_success = 1 - abs(target - obs['player_y'])/target
+        r_vals.append(player_success)
+
+
+        # safe_zone_width = x[3] - x[4]
+        # safe_zone_center = safe_zone_width / 2
+        # r_vals.append((safe_zone_width - abs(safe_zone_center- x[0])) / safe_zone_width)
+
 
         '''if reward >= 0:
             safe_zone_width = x[3] - x[4]   #Top of next pipe - bottom of next pipe
@@ -112,9 +119,9 @@ def fitness(w, seed=SEED, headless=False):
         else:
             this_score = 0
         agent_score += this_score'''
-    agent_score = agent_score * np.mean(r_vals)
+    agent_score = np.mean(r_vals)
+    # agent_score = agent_score * np.mean(r_vals)
     return agent_score
-
 
 def crossover(w1, w2):
     '''
