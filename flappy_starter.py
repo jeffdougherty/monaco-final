@@ -266,8 +266,8 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
 
             # when we have multiple sets per fitness
             while len(weight_list) > 0 and len(winners) != 4:
-                choice = deepcopy(weight_list[0])
-                weight_list = weight_list[1:][:]
+                choice = deepcopy(weight_list.pop(0))  #Will pop off the agent at position 0 and remove it from weight_list automatically.
+                #weight_list = weight_list[1:][:]
 
                 winners.append(choice)
 
