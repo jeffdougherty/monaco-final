@@ -17,7 +17,7 @@ N_PARAMS = 8
 
 MUTATE = True
 
-ALGO_TO_USE = 3         #0 = One that originally showed learning #1 = Jessie's  Even numbers Jessie, Odd numbers Jeff
+ALGO_TO_USE = 1         #0 = One that originally showed learning #1 = Jessie's  Even numbers Jessie, Odd numbers Jeff
 
 MUTATE_TO_USE = 1
 
@@ -134,10 +134,16 @@ def crossover(w1, w2):
     '''
     crossover_pt = random.randint(0, N_PARAMS-1)    #Each agent is N_PARAMS long
 
-    for i in range(crossover_pt, N_PARAMS):
-        swap = w1[i]
-        w1[i] = w2[i]
-        w2[i] = swap
+    #Complying with directions to do single crossover
+    swap = w1[crossover_pt]
+    w1[crossover_pt] = w2[crossover_pt]
+    w2[crossover_pt] = swap
+
+    #Cross over everything from there to end
+    #for i in range(crossover_pt, N_PARAMS):
+    #    swap = w1[i]
+    #    w1[i] = w2[i]
+    #    w2[i] = swap
 
     return [w1, w2]
 
@@ -218,7 +224,7 @@ def train_agent(n_agents=20, n_epochs=100, headless=True):
         clones = [deepcopy(i) for i in top_2] #Clones for the top 2, will not be subjected to mutation
         children = []
         children = children + crossover(top_2[0], top_2[1])  #Children of the top 2
-        for _ in range(4):
+        for _ in range(n_agents - 4):
             '''parents = np.random.choice(winners_fitness, 2, False)       #Choose two different winners at random from the top 4
             children += crossover(agent_dict[parents[0]], agent_dict[parents[1]])'''
             random.shuffle(parents)
