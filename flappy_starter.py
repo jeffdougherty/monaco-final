@@ -14,13 +14,15 @@ SEED = 1234
 
 N_PARAMS = 8
 
+MUTATE = False
+
 ACTION_MAP = {
     1: 119,
     0: None
 }
 
-DIST_MEAN = 0.5  # Mean of normal distribution
-DIST_SD = 0.25  # SD of normal distribution
+DIST_MEAN = 0.0  # Mean of normal distribution
+DIST_SD = 0.5  # SD of normal distribution
 
 FLAPPYBIRD = FlappyBird(width=WIDTH, height=HEIGHT, pipe_gap=GAP)
 
@@ -94,7 +96,7 @@ def fitness(w, seed=SEED, headless=False):
 
         reward = game.act(ACTION_MAP[action])
 
-        #Score: Distance traveled * r, see notes
+        #Score: Pipes traversed * r, see notes
 
         agent_score += 1                    #Number of frames traveled
         safe_zone_width = x[3] - x[4]
@@ -158,7 +160,7 @@ def train_agent(n_agents=10, n_epochs=10, headless=True):
 
     top_2 = []          #Defining here so PyCharm will shut up
 
-    for i in range(n_epochs):
+    for g in range(n_epochs):
         # evaluate fitness
         agent_dict = {}
         fit_list = []
@@ -168,6 +170,7 @@ def train_agent(n_agents=10, n_epochs=10, headless=True):
             #Note: this approach could have problems if we get agents with identical fitness.  Cross that bridge if we come to it.
             w_fit = fitness(w, headless=headless)   #Fitness for this agent
             fit_list.append(w_fit)
+
             agent_dict[w_fit] = w
         fit_list.sort(reverse=True)                             #Put fitness list in order
 
@@ -179,6 +182,7 @@ def train_agent(n_agents=10, n_epochs=10, headless=True):
 
         # crossover
         children = [i for i in top_2]
+        clones = [i for i in top_2]
         #Clones of the top 2
         children += crossover(top_2[0], top_2[1])  #Children of the top 2
         for _ in range(4):
@@ -186,12 +190,14 @@ def train_agent(n_agents=10, n_epochs=10, headless=True):
             children += crossover(agent_dict[parents[0]], agent_dict[parents[1]])
 
         # mutation
-        children = [mutate(_) for _ in children]
+        if MUTATE:
+            children = [mutate(_) for _ in children]
 
         # insertion
         population = children
+        population += clones
 
-        result_string = "Generation " + str(i) +" Best Score: " + str(winners_fitness[0]) + "\n"
+        result_string = "Generation " + str(g) +" Best Score: " + str(winners_fitness[0]) + "\n"
 
         print(result_string)
         res.write(result_string)
@@ -240,9 +246,11 @@ def main(w, seed=SEED, headless=True):
 
 
 if __name__ == '__main__':
+    human_play = False
     np.random.seed(1234)
-    w = train_agent()
-    main(w)
-
+    if not human_play:
+        w = train_agent()
+        main(w)
+    else:
     # For human play, use 'W' key to flap
-    # main(np.zeros(8))
+        main(np.zeros(8), headless=False)
