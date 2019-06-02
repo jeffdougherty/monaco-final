@@ -137,7 +137,7 @@ def eval_fitness(w, seed=SEED, headless=False):
 
 
     elif ALGO_TO_USE == 2:
-        agent_score = dist_traveled - obs['next_pipe_dist_to_player']
+        agent_score = dist_traveled - abs(obs['next_pipe_dist_to_player'])  #Noticed it was giving negative scores to agents that missed too low
 
     return agent_score
 
