@@ -2,6 +2,7 @@ import random
 import numpy as np
 from ple.games.flappybird import FlappyBird
 from ple import PLE
+from copy import deepcopy
 
 # import tensorflow as tf
 
@@ -213,7 +214,6 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
         agent_dict = {}
         fit_list = []
         winners = []
-        children = []
 
         # Want both a way to sort fitness scores and a quick way
         # to find agent associated with that fitness score
@@ -266,7 +266,7 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
 
             # when we have multiple sets per fitness
             while len(weight_list) > 0 and len(winners) != 4:
-                choice = weight_list[0][:]
+                choice = deepcopy(weight_list[0])
                 weight_list = weight_list[1:][:]
 
                 winners.append(choice)
@@ -275,7 +275,7 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
 
             best += 1
 
-        top_2 = winners[:2]
+        top_2 = deepcopy(winners[:2])
 
         # -- Crossover --
         # Create 6 children total from the winner pool
@@ -283,18 +283,25 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
         # * 2 direct clones of top 2 winners
         # * 3 offspring of randomly chosen 2 of the 4 winners
 
+        #Think we want to do it differently to accom diff numbers of agents, and keep our agent pool big:
+        # * 1 child of top 2 winners
+        # * 2 direct clones of top 2 winners
+        # * (n_agents-3) offspring of randomly chosen 2 of 4 winners
+
         # Clones for the top 2 - not subject to mutation
-        clones = [i[:] for i in top_2]
+        clones = [deepcopy(i) for i in top_2]  #Make sure we make a deep copy
         # print('clones==top_2', clones == top_2)
 
         # Children of the top 2
-        children += crossover([top_2[0], top_2[1]]) + clones
+        #children = crossover([top_2[0], top_2[1]]) + clones #As written, this mutates the clones too!
 
-        # creates 3 offspring
+        children = crossover([top_2[0], top_2[1]])
 
-        for _ in range(3):
+        # creates (n_agents - 3) offspring
+
+        for _ in range(n_agents-3):
             random.shuffle(winners)
-            children += crossover([winners[0], winners[1]])
+            children = children + crossover([winners[0], winners[1]])  #+= doesn't work on lists the way we think it does
 
         # -- Mutation --
         offspring = []
@@ -303,18 +310,18 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
 
             if random.randint(0, 1):
 
-                mutant = mutate(children[c])
+                offspring.append(mutate(children[c]))
 
             else:
 
-                mutant = children[c]
+                offspring.append(children[c])
 
-            offspring.append(mutant)
+            #offspring.append(mutant)
 
 
         # -- Insertion --
-        population = clones + winners + offspring
-
+        #population = clones + winners + offspring  #As written, this mutates the clones as well, and puts all 4 winners into the next gen
+        population = offspring + clones
 
         print('consistent best weights:', best_weights[0] == population[0])
         print(len(best_weights[0]) == len(population[0]))
