@@ -17,7 +17,7 @@ N_PARAMS = 8
 
 MUTATE = True
 
-ALGO_TO_USE = 1         #1 = Jessie's.  2= Chancho's, 3 = article's
+ALGO_TO_USE = 1         #1 = Jessie's  Even numbers Jessie, Odd numbers Jeff
 
 ACTION_MAP = {
     1: 119,
