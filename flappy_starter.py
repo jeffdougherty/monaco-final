@@ -17,7 +17,7 @@ N_PARAMS = 8
 
 MUTATE = True
 
-ALGO_TO_USE = 1         #1 = Jessie's  Even numbers Jessie, Odd numbers Jeff
+ALGO_TO_USE = 0         #0 = One that originally showed learning #1 = Jessie's  Even numbers Jessie, Odd numbers Jeff
 
 ACTION_MAP = {
     1: 119,
@@ -101,14 +101,20 @@ def fitness(w, seed=SEED, headless=False):
 
         #Score: Pipes traversed * r, see notes
         # agent_score += 1
-        if ALGO_TO_USE == 1:
+        if ALGO_TO_USE == 0:
+            agent_score += 1  # Number of frames traveled
+            safe_zone_width = x[3] - x[4]
+            safe_zone_center = safe_zone_width / 2
+            r_vals.append((safe_zone_width - abs(safe_zone_center - x[0])) / safe_zone_width)
+        elif ALGO_TO_USE == 1:
             center = abs(obs['next_pipe_top_y'] - obs['next_pipe_bottom_y'] / 2)
             target = obs['next_pipe_top_y'] + center
 
             player_success = 1 - abs(target - obs['player_y'])/target
             r_vals.append(player_success)
-
-    if ALGO_TO_USE == 1:
+    if ALGO_TO_USE == 0:
+        agent_score = agent_score * np.mean(r_vals)
+    elif ALGO_TO_USE == 1:
         agent_score = np.mean(r_vals)
     # agent_score = agent_score * np.mean(r_vals)
     return agent_score
