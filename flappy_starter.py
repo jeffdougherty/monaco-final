@@ -15,7 +15,7 @@ SEED = 1234
 
 N_PARAMS = 8
 
-MUTATE = False
+MUTATE = True
 
 ACTION_MAP = {
     1: 119,
@@ -166,7 +166,7 @@ def train_agent(n_agents=10, n_epochs=10, headless=True):
         agent_dict = {}
         fit_list = []
         top_2 = []
-        parents = set()
+        parents = []
 
         for w in population:                        #Want both a way to sort fitness scores and a quick way to find agent associated with that fitness score
             #Note: this approach could have problems if we get agents with identical fitness.  Cross that bridge if we come to it.
@@ -174,8 +174,8 @@ def train_agent(n_agents=10, n_epochs=10, headless=True):
             fit_list.append(w_fit)
 
             if w_fit not in agent_dict:             #No longer assuming that fitnesses are unique, since they apparently aren't
-                agent_dict[w_fit] = set()
-            agent_dict[w_fit].add(w)
+                agent_dict[w_fit] = []
+            agent_dict[w_fit].append(w)
 
 
             '''if w_fit not in agent_dict:
@@ -190,27 +190,30 @@ def train_agent(n_agents=10, n_epochs=10, headless=True):
 
         for i in range(4):
             this_fitness = fit_list[i]
-            this_fitness_set = agent_dict[this_fitness]
-            while len(this_fitness_set) > 0 and len(top_2) < 2 and len(parents) < 4:
-                this_agent = this_fitness_set.pop()
+            this_fitness_list = agent_dict[this_fitness]
+            while len(this_fitness_list) > 0 and len(top_2) < 2 and len(parents) < 4:
+                if len(this_fitness_list) > 1:
+                    random.shuffle(this_fitness_list)
+                this_agent = this_fitness_list.pop()
                 top_2.append(this_agent)
-                parents.add(this_agent)
-            while len(this_fitness_set) > 0 and len(parents) < 4:
-                parents.add(this_fitness_set.pop())
+                parents.append(this_agent)
+            while len(this_fitness_list) > 0 and len(parents) < 4:
+                if len(this_fitness_list) > 1:
+                    random.shuffle(this_fitness_list)
+                parents.append(this_fitness_list.pop())
 
 
         # crossover
-        children = [deepcopy(i) for i in top_2]
+        #children = [deepcopy(i) for i in top_2]
         clones = [deepcopy(i) for i in top_2] #Clones for the top 2, will not be subjected to mutation
-        children += crossover(top_2[0], top_2[1])  #Children of the top 2
+        children = []
+        children = children + crossover(top_2[0], top_2[1])  #Children of the top 2
         for _ in range(4):
             '''parents = np.random.choice(winners_fitness, 2, False)       #Choose two different winners at random from the top 4
             children += crossover(agent_dict[parents[0]], agent_dict[parents[1]])'''
-            p1 = parents.pop()
-            p2 = parents.pop()
-            children += crossover(p1, p2)
-            parents.add(p1)
-            parents.add(p2)
+            random.shuffle(parents)
+            children = children + crossover(parents[0], parents[1])
+
 
 
         # mutation
@@ -218,10 +221,10 @@ def train_agent(n_agents=10, n_epochs=10, headless=True):
             children = [mutate(_) for _ in children]
 
         # insertion
-        population = children[:]
-        population += clones
+        population = children
+        population = population + clones
 
-        result_string = "Generation " + str(g) +" Best Score: " + str(winners_fitness[0]) + "\n"
+        result_string = "Generation " + str(g) +" Best Score: " + str(fit_list[0]) + "\n"
 
         print(result_string)
         res.write(result_string)
