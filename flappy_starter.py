@@ -17,6 +17,8 @@ N_PARAMS = 8
 
 MUTATE = True
 
+ALGO_TO_USE = 1         #1 = Jessie's.  2= Chancho's, 3 = article's
+
 ACTION_MAP = {
     1: 119,
     0: None
@@ -99,27 +101,15 @@ def fitness(w, seed=SEED, headless=False):
 
         #Score: Pipes traversed * r, see notes
         # agent_score += 1
-        center = abs(obs['next_pipe_top_y'] - obs['next_pipe_bottom_y'] / 2)
-        target = obs['next_pipe_top_y'] + center
+        if ALGO_TO_USE == 1:
+            center = abs(obs['next_pipe_top_y'] - obs['next_pipe_bottom_y'] / 2)
+            target = obs['next_pipe_top_y'] + center
 
-        player_success = 1 - abs(target - obs['player_y'])/target
-        r_vals.append(player_success)
+            player_success = 1 - abs(target - obs['player_y'])/target
+            r_vals.append(player_success)
 
-
-        # safe_zone_width = x[3] - x[4]
-        # safe_zone_center = safe_zone_width / 2
-        # r_vals.append((safe_zone_width - abs(safe_zone_center- x[0])) / safe_zone_width)
-
-
-        '''if reward >= 0:
-            safe_zone_width = x[3] - x[4]   #Top of next pipe - bottom of next pipe
-            safe_zone_center = safe_zone_width / 2
-            r = (safe_zone_width - abs(safe_zone_center - x[1])) / safe_zone_width  #as discussed
-            this_score = 1 * r
-        else:
-            this_score = 0
-        agent_score += this_score'''
-    agent_score = np.mean(r_vals)
+    if ALGO_TO_USE == 1:
+        agent_score = np.mean(r_vals)
     # agent_score = agent_score * np.mean(r_vals)
     return agent_score
 
