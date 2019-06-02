@@ -17,7 +17,9 @@ N_PARAMS = 8
 
 MUTATE = True
 
-ALGO_TO_USE = 0         #0 = One that originally showed learning #1 = Jessie's  Even numbers Jessie, Odd numbers Jeff
+ALGO_TO_USE = 3         #0 = One that originally showed learning #1 = Jessie's  Even numbers Jessie, Odd numbers Jeff
+
+MUTATE_TO_USE = 1
 
 ACTION_MAP = {
     1: 119,
@@ -102,16 +104,23 @@ def fitness(w, seed=SEED, headless=False):
         #Score: Pipes traversed * r, see notes
         # agent_score += 1
         if ALGO_TO_USE == 0:
+            #Jeff n' Jessie v1.0
             agent_score += 1  # Number of frames traveled
             safe_zone_width = x[3] - x[4]
             safe_zone_center = safe_zone_width / 2
             r_vals.append((safe_zone_width - abs(safe_zone_center - x[0])) / safe_zone_width)
         elif ALGO_TO_USE == 1:
+            #Jessie's revision to our algorithm
             center = abs(obs['next_pipe_top_y'] - obs['next_pipe_bottom_y'] / 2)
             target = obs['next_pipe_top_y'] + center
-
             player_success = 1 - abs(target - obs['player_y'])/target
             r_vals.append(player_success)
+        elif ALGO_TO_USE == 3:
+            #Chancho's algorithm
+            if reward > 0:
+                agent_score += 1
+            agent_score += x[2]
+
     if ALGO_TO_USE == 0:
         agent_score = agent_score * np.mean(r_vals)
     elif ALGO_TO_USE == 1:
@@ -139,18 +148,24 @@ def mutate(w):
     '''
     #Given in assignment p(mutate) should be 0.5
     #Rather than mess around with floats, just flip a coin
-
     mut = random.randint(0,1)
-    if mut == 1:        #One means yes, mutate!  Binary joke, ga-harf, ga-harf
-        #First pass at mutation: pick one position in array and randomize.
-        mut_posit = random.randint(0, N_PARAMS-1)
-        w[mut_posit] = np.random.normal(DIST_MEAN, DIST_SD)
+    if MUTATE_TO_USE == 0:
+        if mut == 1:        #One means yes, mutate!  Binary joke, ga-harf, ga-harf
+            #First pass at mutation: pick one position in array and randomize.
+            mut_posit = random.randint(0, N_PARAMS-1)
+            w[mut_posit] = np.random.normal(DIST_MEAN, DIST_SD)
+    elif MUTATE_TO_USE == 1:
+        #Chancho's mutate algorithm, add a small variation at all positions rather than just randomizing one position
+        if mut == 1:
+            for i in range(N_PARAMS):
+                a = np.random.normal(DIST_MEAN, (DIST_SD/2))
+                w[i] += a
 
         #Other possibilities: generate small random quantity around mean of 0, add to one/each position
     return w
 
 
-def train_agent(n_agents=10, n_epochs=10, headless=True):
+def train_agent(n_agents=20, n_epochs=100, headless=True):
     '''
     Train a flappy bird using a genetic algorithm
     '''
@@ -171,8 +186,9 @@ def train_agent(n_agents=10, n_epochs=10, headless=True):
         top_2 = []
         parents = []
 
-        for w in population:                        #Want both a way to sort fitness scores and a quick way to find agent associated with that fitness score
+        for i in range(len(population)):                        #Want both a way to sort fitness scores and a quick way to find agent associated with that fitness score
             #Note: this approach could have problems if we get agents with identical fitness.  Cross that bridge if we come to it.
+            w = population[i]
             w_fit = fitness(w, headless=headless)   #Fitness for this agent
             fit_list.append(w_fit)
 
@@ -180,16 +196,7 @@ def train_agent(n_agents=10, n_epochs=10, headless=True):
                 agent_dict[w_fit] = []
             agent_dict[w_fit].append(w)
 
-
-            '''if w_fit not in agent_dict:
-                agent_dict[w_fit] = [w]'''
         fit_list.sort(reverse=True)                             #Put fitness list in order
-
-        '''for i in range(4):
-            this_fitness = fit_list[i]
-            winners_fitness.append(this_fitness)     #Fitness of top 4 on list
-            if i <= 1:                              #Also track top 2 separately, get actual agents so we can clone and cross
-                top_2.append(agent_dict[this_fitness])'''
 
         for i in range(4):
             this_fitness = fit_list[i]
