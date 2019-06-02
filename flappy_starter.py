@@ -83,6 +83,7 @@ def fitness(w, seed=SEED, headless=False):
     FLAPPYBIRD.rng.seed(seed)
 
     agent_score = 0
+    r_vals = []
 
     while True:
         if game.game_over():
@@ -93,9 +94,22 @@ def fitness(w, seed=SEED, headless=False):
 
         reward = game.act(ACTION_MAP[action])
 
-        # TODO: your fitness logic goes here
-        agent_score = random.randint(1, 100)
+        #Score: Distance traveled * r, see notes
 
+        agent_score += 1                    #Number of frames traveled
+        safe_zone_width = x[3] - x[4]
+        safe_zone_center = safe_zone_width / 2
+        r_vals.append((safe_zone_width - abs(safe_zone_center- x[0])) / safe_zone_width)
+
+        '''if reward >= 0:
+            safe_zone_width = x[3] - x[4]   #Top of next pipe - bottom of next pipe
+            safe_zone_center = safe_zone_width / 2
+            r = (safe_zone_width - abs(safe_zone_center - x[1])) / safe_zone_width  #as discussed
+            this_score = 1 * r
+        else:
+            this_score = 0
+        agent_score += this_score'''
+    agent_score = agent_score * np.mean(r_vals)
     return agent_score
 
 
@@ -130,12 +144,14 @@ def mutate(w):
     return w
 
 
-def train_agent(n_agents=10, n_epochs=100, headless=True):
+def train_agent(n_agents=10, n_epochs=10, headless=True):
     '''
     Train a flappy bird using a genetic algorithm
     '''
     #
     # TODO: genetic algorithm steps below
+
+    res = open('training_results.txt', 'w')
 
     # initialization
     population = initialize(n_agents)
@@ -175,9 +191,14 @@ def train_agent(n_agents=10, n_epochs=100, headless=True):
         # insertion
         population = children
 
+        result_string = "Generation " + str(i) +" Best Score: " + str(winners_fitness[0]) + "\n"
+
+        print(result_string)
+        res.write(result_string)
+
     # return the best agent found
     best_agent = top_2[0]       #The top agent of the last generation to undergo fitness evaluation
-
+    res.close()
     return best_agent
 
 
