@@ -19,7 +19,7 @@ N_AGENTS = 10
 
 MUTATE = True
 
-ALGO_TO_USE = 2  # 1 = Jeff,  2= Jessie's (article's)
+ALGO_TO_USE = 3  # 1 = Jeff,  2= Jessie's (article's)
 
 ACTION_MAP = {
     1: 119,
@@ -122,7 +122,7 @@ def eval_fitness(w, seed=SEED, headless=False):
 
 
         # distance traveled - next_pipe_dist_to_player
-        elif ALGO_TO_USE == 2:
+        elif ALGO_TO_USE == 2 or ALGO_TO_USE == 3:
 
             if reward >= 0:
                 # next_pipe_dist_to_player[t - 1] - next_pipe_dist_to_player[t] = 4
@@ -136,8 +136,16 @@ def eval_fitness(w, seed=SEED, headless=False):
         agent_score = np.mean(r_vals)
 
 
-    elif ALGO_TO_USE == 2:
-        agent_score = dist_traveled - abs(obs['next_pipe_dist_to_player'])  #Noticed it was giving negative scores to agents that missed too low
+    elif ALGO_TO_USE == 3:
+        #Trying to add a relatively small score based on how close the bird is to the center of safe zone
+        #Goal is to differentiate two agents who crashed at the same y, but one was closer to safety than the other
+        #print("top y",x[3],"bottom y",x[4])
+        safe_zone_normalized = x[4] - x[3] #Relative proportion of top y - bottom y
+        target = safe_zone_normalized / 2
+        #print("Target:",target,"player Y",x[0],"distance",abs(target-x[0]))
+        print("Distance:",abs(target-x[0]))
+        prox_score = 1 - (abs(target - x[0]))
+        agent_score = dist_traveled + prox_score  #Noticed it was giving negative scores to agents that missed too low
 
     return agent_score
 
