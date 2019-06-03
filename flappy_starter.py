@@ -196,13 +196,17 @@ def mutate(w):
     Apply mutations to an agent's genome with probability 0.5
     """
 
-    mut = random.randint(0, 1)
-
-    for param in range(N_PARAMS - 1):
+    '''for param in range(N_PARAMS - 1):
         mut = random.uniform(0,1)
         if mut <= P_MUT:
             w[param] += np.random.normal(MUT_MEAN, MUT_SD)
 
+    return w'''
+
+    mut = random.uniform(0,1)
+    if mut <= P_MUT:
+        mut_point = random.randint(0, N_PARAMS-1)
+        w[mut_point] += np.random.normal(MUT_MEAN, MUT_SD)
     return w
 
 def train_agent(n_agents=N_AGENTS, n_epochs=100, headless=True):
