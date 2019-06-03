@@ -144,10 +144,13 @@ def eval_fitness(w, seed=SEED, headless=False):
         #print("top y",x[3],"bottom y",x[4])
         safe_zone_normalized = x[4] - x[3] #Relative proportion of top y - bottom y
         target = safe_zone_normalized / 2
-        #print("Target:",target,"player Y",x[0],"distance",abs(target-x[0]))
-        print("Distance:",abs(target-x[0]))
-        prox_score = 1 - (abs(target - x[0]))
-        agent_score = dist_traveled + prox_score  #Noticed it was giving negative scores to agents that missed too low
+        print("Target:",target,"player Y",x[0])
+        dist = abs(target-x[0])
+        dist_score = 1-dist
+        print("distance",dist,"distance score",dist_score)
+        #print("Distance:",abs(target-x[0]))
+
+        agent_score = dist_traveled + dist_score  #Noticed it was giving negative scores to agents that missed too low
 
     return agent_score
 
@@ -232,6 +235,7 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
         agent_dict = {}
         fit_list = []
         winners = []
+        winner_set = set()
 
         # Want both a way to sort fitness scores and a quick way
         # to find agent associated with that fitness score
@@ -286,8 +290,10 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
             while len(weight_list) > 0 and len(winners) != 4:
                 choice = deepcopy(weight_list[0])  #Will pop off the agent at position 0 and remove it from weight_list automatically.
                 weight_list = weight_list[1:][:]
-
-                winners.append(choice)
+                choice_t = tuple(choice)            #Must be immutable for set membership
+                if choice_t not in winner_set:        #Can check for membership in O(1)
+                    winners.append(choice)
+                    winner_set.add(choice_t)
 
                 count += 1
 
