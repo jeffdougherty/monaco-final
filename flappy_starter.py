@@ -18,8 +18,10 @@ N_PARAMS = 8
 N_AGENTS = 10
 
 P_MUT = 0.5
+MUT_MEAN = 0
+MUT_SD = 0.1
 
-ALGO_TO_USE = 3  # 1 = Jeff,  2= Jessie's (article's)
+ALGO_TO_USE = 7  # 1 = Jeff,  2= Jessie's (article's)  3=Jeff's attempt at using r  5=article's with distance to next subtracted
 
 ACTION_MAP = {
     1: 119,
@@ -129,6 +131,14 @@ def eval_fitness(w, seed=SEED, headless=False):
                 dist_traveled += 4
                 # (this is consistent throughout game)
 
+        elif ALGO_TO_USE == 5:
+            if reward >= 0:
+                agent_score += 1
+
+        elif ALGO_TO_USE == 7:
+            if reward > 0:
+                agent_score += 1
+
     # agent's fitness
 
     if ALGO_TO_USE == 1:
@@ -140,16 +150,30 @@ def eval_fitness(w, seed=SEED, headless=False):
         #Trying to add a relatively small score based on how close the bird is to the center of safe zone
         #Goal is to differentiate two agents who crashed at the same y, but one was closer to safety than the other
         #print("top y",x[3],"bottom y",x[4])
-        safe_zone_normalized = x[4] - x[3] #Relative proportion of top y - bottom y
-        target = (safe_zone_normalized / 2) + x[4]
-        print("Target:",target,"player Y",x[0])
+        target = get_target(x)
         dist_from_target = abs(target-x[0])
         dist_score = 1-dist_from_target
         print("distance",dist_from_target, "distance score:", dist_score)
         agent_score = dist_traveled + dist_score  #Noticed it was giving negative scores to agents that missed too low
 
+    elif ALGO_TO_USE == 5:
+        agent_score -= obs['next_pipe_dist_to_player']
+
+    elif ALGO_TO_USE == 7:
+        #agent_score -= x[2]  #Chancho's baseline algorithm with safe-zone sensing
+        target = get_target(x)
+        dist_from_target = abs(target-x[0])
+        dist_score = 1-dist_from_target
+        print("distance", dist_from_target, "distance score:", dist_score)
+        agent_score += dist_score
+
     return agent_score
 
+def get_target(x):
+    safe_zone_normalized = x[4] - x[3]  # Relative proportion of top y - bottom y
+    target = (safe_zone_normalized / 2) + x[4]
+    print("Target:", target, "player Y", x[0])
+    return target
 
 def crossover(parents):
     """
@@ -175,12 +199,13 @@ def mutate(w):
     mut = random.randint(0, 1)
 
     for param in range(N_PARAMS - 1):
-        if random.randint(0,1):
-            w[param] += np.random.normal(DIST_MEAN, DIST_SD)
+        mut = random.uniform(0,1)
+        if mut <= P_MUT:
+            w[param] += np.random.normal(MUT_MEAN, MUT_SD)
 
     return w
 
-def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
+def train_agent(n_agents=N_AGENTS, n_epochs=100, headless=True):
     """
     Train a flappy bird using a genetic algorithm
     """
@@ -410,7 +435,7 @@ if __name__ == '__main__':
     if not human_play:
         w = train_agent()
         print(w)
-        main(w)
+        main(w, headless=False)
 
     else:
         # For human play, use 'W' key to flap
