@@ -18,6 +18,7 @@ N_PARAMS = 8
 N_AGENTS = 10
 
 P_MUT = 0.5
+MUTATE_ALL = False
 MUT_MEAN = 0
 MUT_SD = 1
 
@@ -73,7 +74,7 @@ def initialize(n_agents=N_AGENTS):
     for i in range(n_agents):
         # this_agent = np.zeros(8)
         # this_agent = [1.1828843144200194, 0.047874517980502934, 0.0, -1.061810124546465, 1.0520386833146527, -0.06356522803788328, -1.061810124546465, 0.32965948666649525]
-        this_agent = [np.random.normal(DIST_MEAN, DIST_SD) for j in range(N_PARAMS)]
+        this_agent = [np.random.uniform(-1,1) for j in range(N_PARAMS)]
         agents.append(this_agent)
         # agents.append(this_agent)
 
@@ -203,14 +204,18 @@ def mutate(w):
             w[param] += np.random.normal(MUT_MEAN, MUT_SD)
 
     return w'''
-
     mut = random.uniform(0,1)
-    if mut <= P_MUT:
-        mut_point = random.randint(0, N_PARAMS-1)
-        w[mut_point] += np.random.normal(MUT_MEAN, MUT_SD)
+    if not MUTATE_ALL:
+        if mut <= P_MUT:
+            mut_point = random.randint(0, N_PARAMS-1)
+            w[mut_point] += np.random.normal(MUT_MEAN, MUT_SD)
+    else:
+       if mut <= P_MUT:
+           for i in range(N_PARAMS):
+               w[i] += np.random.normal(MUT_MEAN, MUT_SD)
     return w
 
-def train_agent(n_agents=N_AGENTS, n_epochs=10000, headless=True):
+def train_agent(n_agents=N_AGENTS, n_epochs=500, headless=True):
     """
     Train a flappy bird using a genetic algorithm
     """
@@ -320,55 +325,16 @@ def train_agent(n_agents=N_AGENTS, n_epochs=10000, headless=True):
         #Start with the 4 parents that are going to be carried forward into the next generation
 
         children = [deepcopy(p) for p in parents]
-        #Add offspring of top 2 winners
-        children.append(mutate(crossover(top_2)))
-        #Now that we've used the top 2 to produce children, can mutate them
-        for agent in top_2:
-            children.append(mutate(agent))
+        if n_agents == 10:
+            #Add offspring of top 2 winners
+            children.append(mutate(crossover(top_2)))
+            #Now that we've used the top 2 to produce children, can mutate them
+            for agent in top_2:
+                children.append(mutate(agent))
 
-        for _ in range(4):
-            random.shuffle(parents)
-            children.append(mutate(crossover([parents[0], parents[1]])))
-
-        ''''#Think we want to do it differently to accom diff numbers of agents, and keep our agent pool big:
-        # * 1 child of top 2 winners
-        # * 2 direct clones of top 2 winners
-        # * (n_agents-3) offspring of randomly chosen 2 of 4 winners
-
-        # Clones for the top 2 - not subject to mutation
-        clones = [deepcopy(i) for i in top_2]  #Make sure we make a deep copy
-        # print('clones==top_2', clones == top_2)
-
-        # Children of the top 2
-        #children = crossover([top_2[0], top_2[1]]) + clones #As written, this mutates the clones too!
-
-        children = crossover([top_2[0], top_2[1]])
-
-
-        for _ in range(4):
-            random.shuffle(winners)
-            children = children + crossover([winners[0], winners[1]])  #+= doesn't work on lists the way we think it does
-
-
-        # -- Mutation --
-        offspring = []
-
-        for c in range(len(children)):
-
-            if random.randint(0, 1):
-
-                offspring.append(mutate(children[c]))
-
-            else:
-
-                offspring.append(children[c])
-
-            #offspring.append(mutant)
-
-
-        # -- Insertion --
-        #population = clones + winners + offspring  #As written, this mutates the clones as well, and puts all 4 winners into the next gen
-        population = offspring + clones'''
+            for _ in range(4):
+                random.shuffle(parents)
+                children.append(mutate(crossover([parents[0], parents[1]])))
 
         #print('consistent best weights:', best_weights[0] == population[0])
         #print(len(best_weights[0]) == len(population[0]))
@@ -379,6 +345,8 @@ def train_agent(n_agents=N_AGENTS, n_epochs=10000, headless=True):
 
         print(result_string)
         res.write(result_string)
+
+        population = children
 
     # RETURN: The top agent of the last generation to undergo fitness evaluation
     best_agent = parents[0]
