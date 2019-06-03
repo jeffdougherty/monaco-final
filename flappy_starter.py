@@ -169,26 +169,16 @@ def crossover(parents):
 
 def mutate(w):
     """
-    Apply random mutations to an agent's genome
+    Apply mutations to an agent's genome with probability 0.5
     """
-    # Given in assignment p(mutate) should be 0.5
 
-    # Hit a ton of plateaus, wanted to introduce a different kind of disruption
     mut = random.randint(0, 1)
 
-    # if mut == 1:  # One means yes, mutate!  Binary joke, ga-harf, ga-harf
-        # First pass at mutation: pick one position in array and randomize.
-    # mut_posit = random.randint(0, N_PARAMS - 1)
-    # w[mut_posit] = np.random.normal(DIST_MEAN, DIST_SD)
+    for param in range(N_PARAMS - 1):
+        if random.randint(0,1):
+            w[param] += np.random.normal(DIST_MEAN, DIST_SD)
 
-    # else:
-        # add noise to all weights
-    noise = np.random.normal(DIST_MEAN, DIST_SD, 8)
-    w += noise
-
-    # Other possibilities: generate small random quantity around mean of 0, add to one/each position
     return w
-
 
 def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
     """
@@ -209,15 +199,16 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
     population = initialize(n_agents)
     # population.append(superstar)
 
-    best_weights = []
+    #best_weights = []
     best_fitness = 0
+    parents = []
 
     for g in range(n_epochs):
 
         # to evaluate fitness
         agent_dict = {}
         fit_list = []
-        winners = []
+        parents = []        #Agents chosen to reproduce for next generation
 
         # Want both a way to sort fitness scores and a quick way
         # to find agent associated with that fitness score
@@ -256,19 +247,24 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
         # -- Selection --
         # Choose the 4 best agents for mating = "winners"
         best = 0
-        count = 0
 
-        while count < 4:
+        while len(parents) < 4:
 
             # grab top agent metrics
             fitness = fit_list[best]
-            weight_list = agent_dict[fitness][:]
+            agent_list = agent_dict[fitness]
 
             ### CHECK weight_list len
+            if len(agent_list) > 1:
+                random.shuffle(agent_list)
 
-            random.shuffle(weight_list)
+            while len(agent_list) > 0 and len(parents) < 4:
+                choice = agent_list.pop(0)                 #Remove from weight list and pop to choice
+                parents.append(choice)
 
-            # when we have multiple sets per fitness
+            best += 1                                       #Agents get added to parents in order of fitness
+
+            '''# when we have multiple sets per fitness
             while len(weight_list) > 0 and len(winners) != 4:
                 choice = deepcopy(weight_list[0])  #Will pop off the agent at position 0 and remove it from weight_list automatically.
                 weight_list = weight_list[1:][:]
@@ -277,17 +273,34 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
 
                 count += 1
 
-            best += 1
+            best += 1'''
 
-        top_2 = deepcopy(winners[:2])
+        top_2 = deepcopy(parents[:2])                   #Top 2 agents, will be reproduced mutated and put in pool
 
-        # -- Crossover --
+
+        ''''# -- Crossover --
         # Create 6 children total from the winner pool
-        # * 1 child of top 2 winners
-        # * 2 direct clones of top 2 winners
+        # * 4 parents from the previous generation
         # * 3 offspring of randomly chosen 2 of the 4 winners
+        # * 2 direct clones of top 2 winners
+        # * 1 child of top 2 winners
+        # * And a partridge in a pear tree'''
 
-        #Think we want to do it differently to accom diff numbers of agents, and keep our agent pool big:
+        #Start initializing children
+        #Start with the 4 parents that are going to be carried forward into the next generation
+
+        children = [deepcopy(p) for p in parents]
+        #Add offspring of top 2 winners
+        children.append(mutate(crossover(top_2)))
+        #Now that we've used the top 2 to produce children, can mutate them
+        for agent in top_2:
+            children.append(mutate(agent))
+
+        for _ in range(4):
+            random.shuffle(parents)
+            children.append(mutate(crossover([parents[0], parents[1]])))
+
+        ''''#Think we want to do it differently to accom diff numbers of agents, and keep our agent pool big:
         # * 1 child of top 2 winners
         # * 2 direct clones of top 2 winners
         # * (n_agents-3) offspring of randomly chosen 2 of 4 winners
@@ -325,11 +338,11 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
 
         # -- Insertion --
         #population = clones + winners + offspring  #As written, this mutates the clones as well, and puts all 4 winners into the next gen
-        population = offspring + clones
+        population = offspring + clones'''
 
-        print('consistent best weights:', best_weights[0] == population[0])
-        print(len(best_weights[0]) == len(population[0]))
-        print('best_weights', best_weights)
+        #print('consistent best weights:', best_weights[0] == population[0])
+        #print(len(best_weights[0]) == len(population[0]))
+        #print('best_weights', best_weights)
 
 
         result_string = "Generation " + str(g) + " Best Score: " + str(fit_list[0]) + "\n"
@@ -338,9 +351,9 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
         res.write(result_string)
 
     # RETURN: The top agent of the last generation to undergo fitness evaluation
-    best_agent = top_2[0]
+    best_agent = parents[0]
     print('best_agent', best_agent)
-    print('consistency:', best_weights[0] == best_agent)
+    #print('consistency:', best_weights[0] == best_agent)
 
     
     res.close()
@@ -387,7 +400,7 @@ def main(w, seed=SEED, headless=False):
 
 
 if __name__ == '__main__':
-    human_play = 0
+    human_play = False
 
     # added bc population reaches equilibrium v fast (aka stops learning & can't improve)
 
