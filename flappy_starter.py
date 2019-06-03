@@ -19,6 +19,8 @@ N_AGENTS = 10
 
 MUTATE = True
 
+CHOOSE_ONE_OFFSPRING = False
+
 ALGO_TO_USE = 3  # 1 = Jeff,  2= Jessie's (article's)
 
 ACTION_MAP = {
@@ -160,15 +162,23 @@ def crossover(parents):
 
     # Each agent is N_PARAMS long
 
+    #!!! Important note- "single point crossover" means picking a single point and exchanging all values *from there to end of string!*
+
+    #Changing code back
+
     crossover_pt = random.randint(0, N_PARAMS - 1)
-    swap = w1[crossover_pt]
-    w1[crossover_pt] = w2[crossover_pt]
-    w2[crossover_pt] = swap
+    for i in range(crossover_pt, N_PARAMS):
+        swap = w1[i]
+        w1[i] = w2[i]
+        w2[i] = swap
 
-    # the chosen one
-    chosen_one = [w1, w2][random.randint(0, 1)]
+    if CHOOSE_ONE_OFFSPRING:
+        # the chosen one
+        chosen_one = [w1, w2][random.randint(0, 1)]
 
-    return [chosen_one]
+        return [chosen_one]
+    else:
+        return [w1, w2]
 
 
 def mutate(w):
@@ -306,10 +316,15 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
         children = crossover([top_2[0], top_2[1]])
 
         # creates (n_agents - 3) offspring
+        if CHOOSE_ONE_OFFSPRING:
+            agents_to_gen = n_agents - 3
+        else:
+            agents_to_gen = (n_agents-4) // 2
 
-        for _ in range(n_agents-3):
+        for _ in range(agents_to_gen):
             random.shuffle(winners)
             children = children + crossover([winners[0], winners[1]])  #+= doesn't work on lists the way we think it does
+
 
         # -- Mutation --
         offspring = []
