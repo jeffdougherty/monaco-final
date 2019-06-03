@@ -19,9 +19,9 @@ N_AGENTS = 10
 
 P_MUT = 0.5
 MUT_MEAN = 0
-MUT_SD = 0.1
+MUT_SD = 1
 
-ALGO_TO_USE = 7  # 1 = Jeff,  2= Jessie's (article's)  3=Jeff's attempt at using r  5=article's with distance to next subtracted
+ALGO_TO_USE = 5  # 1 = Jeff,  2= Jessie's (article's)  3=Jeff's attempt at using r  5=article's with distance to next subtracted
 
 ACTION_MAP = {
     1: 119,
@@ -30,6 +30,8 @@ ACTION_MAP = {
 
 DIST_MEAN = 0  # Mean of normal distribution
 DIST_SD = 1     # SD of normal distribution
+
+PRINT_INDIV = False
 
 FLAPPYBIRD = FlappyBird(width=WIDTH, height=HEIGHT, pipe_gap=GAP)
 
@@ -132,7 +134,7 @@ def eval_fitness(w, seed=SEED, headless=False):
                 # (this is consistent throughout game)
 
         elif ALGO_TO_USE == 5:
-            if reward >= 0:
+            if reward > 0:
                 agent_score += 1
 
         elif ALGO_TO_USE == 7:
@@ -145,26 +147,24 @@ def eval_fitness(w, seed=SEED, headless=False):
 
         agent_score = np.mean(r_vals)
 
-
-    elif ALGO_TO_USE == 3:
-        #Trying to add a relatively small score based on how close the bird is to the center of safe zone
-        #Goal is to differentiate two agents who crashed at the same y, but one was closer to safety than the other
-        #print("top y",x[3],"bottom y",x[4])
+    elif ALGO_TO_USE == 5:
+        pipe_proximity_score = 1.0 - x[2]  #Chancho's baseline algorithm
+        agent_score += pipe_proximity_score
         target = get_target(x)
         dist_from_target = abs(target-x[0])
-        dist_score = 1-dist_from_target
-        print("distance",dist_from_target, "distance score:", dist_score)
-        agent_score = dist_traveled + dist_score  #Noticed it was giving negative scores to agents that missed too low
-
-    elif ALGO_TO_USE == 5:
-        agent_score -= obs['next_pipe_dist_to_player']
+        agent_score -= dist_from_target
+        if PRINT_INDIV:
+            print("distance to next pipe:", x[2], "pipe proximity score:", pipe_proximity_score)
+            print("distance", dist_from_target, "distance score:", dist_from_target)
+            print("agnent score:", agent_score)
 
     elif ALGO_TO_USE == 7:
         #agent_score -= x[2]  #Chancho's baseline algorithm with safe-zone sensing
         target = get_target(x)
         dist_from_target = abs(target-x[0])
         dist_score = 1-dist_from_target
-        print("distance", dist_from_target, "distance score:", dist_score)
+        if PRINT_INDIV:
+            print("distance", dist_from_target, "distance score:", dist_score)
         agent_score += dist_score
 
     return agent_score
@@ -172,7 +172,8 @@ def eval_fitness(w, seed=SEED, headless=False):
 def get_target(x):
     safe_zone_normalized = x[4] - x[3]  # Relative proportion of top y - bottom y
     target = (safe_zone_normalized / 2) + x[4]
-    print("Target:", target, "player Y", x[0])
+    if PRINT_INDIV:
+        print("Target:", target, "player Y", x[0])
     return target
 
 def crossover(parents):
@@ -209,7 +210,7 @@ def mutate(w):
         w[mut_point] += np.random.normal(MUT_MEAN, MUT_SD)
     return w
 
-def train_agent(n_agents=N_AGENTS, n_epochs=100, headless=True):
+def train_agent(n_agents=N_AGENTS, n_epochs=10000, headless=True):
     """
     Train a flappy bird using a genetic algorithm
     """
@@ -246,7 +247,7 @@ def train_agent(n_agents=N_AGENTS, n_epochs=100, headless=True):
 
             w_fit = eval_fitness(w, headless=headless)
             fit_list.append(w_fit)
-            print(w_fit, w)
+            #print(w_fit, w)
 
             # one measure of fitness could have multiple
             # sets of weights associated with it
@@ -264,8 +265,8 @@ def train_agent(n_agents=N_AGENTS, n_epochs=100, headless=True):
             if best_fitness < w_fit:
                 best_fitness = w_fit
                 best_weights = agent_dict[w_fit][:]
-                print('best_fitness', best_fitness)
-                print('best_weights', best_weights)
+                #print('best_fitness', best_fitness)
+                #print('best_weights', best_weights)
                 res.write('\n' + '*FITNESS  ' + str(best_fitness) + '\n\n')
                 res.write('\n' + '*WEIGHTS' + '\n' + str(best_weights) + '\n\n')
 
@@ -437,7 +438,7 @@ if __name__ == '__main__':
     np.random.seed(1234)
 
     if not human_play:
-        w = train_agent()
+        w = train_agent(headless=True)
         print(w)
         main(w, headless=False)
 
