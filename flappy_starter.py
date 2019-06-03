@@ -141,7 +141,7 @@ def eval_fitness(w, seed=SEED, headless=False):
         #Goal is to differentiate two agents who crashed at the same y, but one was closer to safety than the other
         #print("top y",x[3],"bottom y",x[4])
         safe_zone_normalized = x[4] - x[3] #Relative proportion of top y - bottom y
-        target = safe_zone_normalized / 2
+        target = (safe_zone_normalized / 2) + x[4]
         print("Target:",target,"player Y",x[0])
         dist_from_target = abs(target-x[0])
         dist_score = 1-dist_from_target
