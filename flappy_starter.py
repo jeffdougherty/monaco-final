@@ -17,9 +17,7 @@ SEED = 1234
 N_PARAMS = 8
 N_AGENTS = 10
 
-MUTATE = True
-
-CHOOSE_ONE_OFFSPRING = False
+P_MUT = 0.5
 
 ALGO_TO_USE = 3  # 1 = Jeff,  2= Jessie's (article's)
 
@@ -28,7 +26,7 @@ ACTION_MAP = {
     0: None
 }
 
-DIST_MEAN = .1  # Mean of normal distribution
+DIST_MEAN = 0  # Mean of normal distribution
 DIST_SD = 1     # SD of normal distribution
 
 FLAPPYBIRD = FlappyBird(width=WIDTH, height=HEIGHT, pipe_gap=GAP)
@@ -303,13 +301,8 @@ def train_agent(n_agents=N_AGENTS, n_epochs=1000, headless=False):
 
         children = crossover([top_2[0], top_2[1]])
 
-        # creates (n_agents - 3) offspring
-        if CHOOSE_ONE_OFFSPRING:
-            agents_to_gen = n_agents - 3
-        else:
-            agents_to_gen = (n_agents-4) // 2
 
-        for _ in range(agents_to_gen):
+        for _ in range(4):
             random.shuffle(winners)
             children = children + crossover([winners[0], winners[1]])  #+= doesn't work on lists the way we think it does
 
