@@ -144,10 +144,11 @@ def eval_fitness(w, seed=SEED, headless=False):
         #print("top y",x[3],"bottom y",x[4])
         safe_zone_normalized = x[4] - x[3] #Relative proportion of top y - bottom y
         target = safe_zone_normalized / 2
-        #print("Target:",target,"player Y",x[0],"distance",abs(target-x[0]))
-        print("Distance:",abs(target-x[0]))
-        prox_score = 1 - (abs(target - x[0]))
-        agent_score = dist_traveled + prox_score  #Noticed it was giving negative scores to agents that missed too low
+        print("Target:",target,"player Y",x[0])
+        dist_from_target = abs(target-x[0])
+        dist_score = 1-dist_from_target
+        print("distance",dist_from_target, "distance score:", dist_score)
+        agent_score = dist_traveled + dist_score  #Noticed it was giving negative scores to agents that missed too low
 
     return agent_score
 
@@ -157,8 +158,6 @@ def crossover(parents):
     Single-Point Crossover:
     Generate an offspring from two agents, w1 and w2
     """
-    w1 = parents[0]
-    w2 = parents[1]
 
     # Each agent is N_PARAMS long
 
@@ -167,18 +166,7 @@ def crossover(parents):
     #Changing code back
 
     crossover_pt = random.randint(0, N_PARAMS - 1)
-    for i in range(crossover_pt, N_PARAMS):
-        swap = w1[i]
-        w1[i] = w2[i]
-        w2[i] = swap
-
-    if CHOOSE_ONE_OFFSPRING:
-        # the chosen one
-        chosen_one = [w1, w2][random.randint(0, 1)]
-
-        return [chosen_one]
-    else:
-        return [w1, w2]
+    return parents[0][:crossover_pt] + parents[1][crossover_pt:]
 
 
 def mutate(w):
