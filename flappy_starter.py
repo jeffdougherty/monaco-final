@@ -4,9 +4,9 @@ from ple.games.flappybird import FlappyBird
 from ple import PLE
 from copy import deepcopy
 
-# import tensorflow as tf
+import inspect
 
-
+# Game setup
 NUM_FRAMES = 10000
 
 WIDTH = 288
@@ -14,13 +14,25 @@ HEIGHT = 512
 GAP = 100
 SEED = 1234
 
+# Weight params
+POS_Y = 0
+Y_VEL = 1
+NPIPE_DIST = 2
+NPIPE_TOP_Y = 3
+NPIPE_BOTTOM_Y = 4
+NNPIPE_DIST = 5
+NNPIPE_TOP_Y = 6
+NNPIPE_BOTTOM_Y = 7
+
+
 N_PARAMS = 8
 N_AGENTS = 10
 
+# Mutation 
 P_MUT = 0.5
-MUTATE_ALL = False
+MUTATE_ALL = True
 MUT_MEAN = 0
-MUT_SD = 1
+MUT_SD = 1.2
 
 ALGO_TO_USE = 5  # 1 = Jeff,  2= Jessie's (article's)  3=Jeff's attempt at using r  5=article's with distance to next subtracted
 
@@ -29,6 +41,7 @@ ACTION_MAP = {
     0: None
 }
 
+
 DIST_MEAN = 0  # Mean of normal distribution
 DIST_SD = 1     # SD of normal distribution
 
@@ -36,6 +49,15 @@ PRINT_INDIV = False
 
 FLAPPYBIRD = FlappyBird(width=WIDTH, height=HEIGHT, pipe_gap=GAP)
 
+
+
+
+def ezprint(var):
+    """
+    Because I'm tired of writing multi-arg print statements
+    """
+    callers_local_vars = inspect.currentframe().f_back.f_locals.items()
+    print([var_name for var_name, var_val in callers_local_vars if var_val is var], len(var), var)
 
 
 
@@ -52,6 +74,7 @@ def normalize(obs):
     ]
 
     return np.array(x)
+
 
 
 def agent(x, w):
@@ -72,8 +95,7 @@ def initialize(n_agents=N_AGENTS):
     agents = []
 
     for i in range(n_agents):
-        # this_agent = np.zeros(8)
-        # this_agent = [1.1828843144200194, 0.047874517980502934, 0.0, -1.061810124546465, 1.0520386833146527, -0.06356522803788328, -1.061810124546465, 0.32965948666649525]
+
         this_agent = [np.random.uniform(-1,1) for j in range(N_PARAMS)]
         agents.append(this_agent)
         # agents.append(this_agent)
@@ -81,7 +103,7 @@ def initialize(n_agents=N_AGENTS):
     return agents
 
 
-def eval_fitness(w, seed=SEED, headless=False):
+def eval_fitness(w, seed=SEED, headless=True):
     """
     Evaluate the fitness of an agent with the game
     game is a PLE game
@@ -89,12 +111,8 @@ def eval_fitness(w, seed=SEED, headless=False):
     """
 
     # disable rendering if headless
-    if headless:
-        display_screen = False
-        force_fps = True
-    else:
-        display_screen = True
-        force_fps = False
+    display_screen = not(headless)
+    force_fps = headless
 
     # game init
     game = PLE(FLAPPYBIRD, display_screen=display_screen, force_fps=force_fps, rng=seed)
@@ -105,46 +123,41 @@ def eval_fitness(w, seed=SEED, headless=False):
     agent_score = 0
     r_vals = []
     dist_traveled = 0
+    iterations = 0
 
     while True:
+
         if game.game_over():
             break
 
         obs = game.getGameState()
-        # print(obs)
         x = normalize(obs)
         action = agent(x, w)
 
         reward = game.act(ACTION_MAP[action])
 
         # Score: Pipes traversed * r, see notes
-        if ALGO_TO_USE == 1:
-            center = abs(obs['next_pipe_top_y'] - obs['next_pipe_bottom_y'] / 2)
-            target = obs['next_pipe_top_y'] + center
+        # center = abs(obs['next_pipe_top_y'] - obs['next_pipe_bottom_y'] / 2)
+        # target = obs['next_pipe_top_y'] + center
 
-            player_success = 1 - abs(target - obs['player_y']) / target
-            r_vals.append(player_success)
+        # player_success = 1 - abs(target - obs['player_y']) / target
+            
+        # r_vals.append(player_success)
 
 
         # distance traveled - next_pipe_dist_to_player
-        elif ALGO_TO_USE == 2 or ALGO_TO_USE == 3:
+        dist_from_target = abs(get_target(x) - x[POS_Y])
 
-            if reward >= 0:
-                # next_pipe_dist_to_player[t - 1] - next_pipe_dist_to_player[t] = 4
-                dist_traveled += 4
-                # (this is consistent throughout game)
+        if reward > 0:
 
-        elif ALGO_TO_USE == 5:
-            if reward > 0:
-                agent_score += 1
+            agent_score += 1
+            print('SCORED', agent_score)
 
-        elif ALGO_TO_USE == 7:
-            if reward > 0:
-                agent_score += 1
+        elif reward == 0:
 
-    # agent's fitness
-
-    if ALGO_TO_USE == 1:
+            # dist_traveled += 0.01 
+            agent_score += (1.0 - dist_from_target)
+            # (rough estimate, normalized)
 
         agent_score = np.mean(r_vals)
 
@@ -171,23 +184,20 @@ def eval_fitness(w, seed=SEED, headless=False):
     return agent_score
 
 def get_target(x):
+    #print(x[4], x[3])
     safe_zone_normalized = x[4] - x[3]  # Relative proportion of top y - bottom y
-    target = (safe_zone_normalized / 2) + x[4]
+    target = (safe_zone_normalized / 2) + x[3]
     if PRINT_INDIV:
         print("Target:", target, "player Y", x[0])
     return target
 
 def crossover(parents):
     """
-    Single-Point Crossover:
-    Generate an offspring from two agents, w1 and w2
+    Single-Point Crossover: combining 2 slices of parent attributes 
+    - exchanging all values *from crossover_pt to end of string*
     """
-
-    # Each agent is N_PARAMS long
-
-    #!!! Important note- "single point crossover" means picking a single point and exchanging all values *from there to end of string!*
-
-    #Changing code back
+    
+    # pick crossover point at random 
 
     crossover_pt = random.randint(0, N_PARAMS - 1)
     return parents[0][:crossover_pt] + parents[1][crossover_pt:]
@@ -207,49 +217,46 @@ def mutate(w):
     mut = random.uniform(0,1)
     if not MUTATE_ALL:
         if mut <= P_MUT:
-            mut_point = random.randint(0, N_PARAMS-1)
+        
+            mut_point = random.randint(0, N_PARAMS - 1)
             w[mut_point] += np.random.normal(MUT_MEAN, MUT_SD)
+    
+
     else:
-       if mut <= P_MUT:
+
+        if mut <= P_MUT:
+        
            for i in range(N_PARAMS):
                w[i] += np.random.normal(MUT_MEAN, MUT_SD)
+    
     return w
 
-def train_agent(n_agents=N_AGENTS, n_epochs=500, headless=True):
+def train_agent(n_agents=N_AGENTS, n_epochs=100, headless=True):
     """
     Train a flappy bird using a genetic algorithm
     """
     # TODO: genetic algorithm steps below
 
-    # manually picked best weights thus far
-    # superstar = [
-    #     [1.1828843144200194, 0.047874517980502934, 0.0, -1.061810124546465, 1.0520386833146527, -0.06356522803788328,
-    #      -1.061810124546465, 0.32965948666649525]]
-    # superstar = superstar[0]
-
     res = open('training_results.txt', 'w')
 
     # --Initialization--
-    # population = initialize(n_agents - 1)
     population = initialize(n_agents)
-    # population.append(superstar)
 
     #best_weights = []
     best_fitness = 0
-    parents = []
+    winners = []
 
     for g in range(n_epochs):
 
         # to evaluate fitness
         agent_dict = {}
         fit_list = []
-        parents = []        #Agents chosen to reproduce for next generation
+        winners = []        #Agents chosen to reproduce for next generation
 
         # Want both a way to sort fitness scores and a quick way
         # to find agent associated with that fitness score
         for w in population:
             # Fitness for this agent
-
             w_fit = eval_fitness(w, headless=headless)
             fit_list.append(w_fit)
             #print(w_fit, w)
@@ -283,7 +290,7 @@ def train_agent(n_agents=N_AGENTS, n_epochs=500, headless=True):
         # Choose the 4 best agents for mating = "winners"
         best = 0
 
-        while len(parents) < 4:
+        while len(winners) < 4:
 
             # grab top agent metrics
             fitness = fit_list[best]
@@ -293,38 +300,36 @@ def train_agent(n_agents=N_AGENTS, n_epochs=500, headless=True):
             if len(agent_list) > 1:
                 random.shuffle(agent_list)
 
-            while len(agent_list) > 0 and len(parents) < 4:
+            while len(agent_list) > 0 and len(winners) < 4:
                 choice = agent_list.pop(0)                 #Remove from weight list and pop to choice
-                parents.append(choice)
+                winners.append(choice)
 
-            best += 1                                       #Agents get added to parents in order of fitness
+            best += 1                                       #Agents get added to winners in order of fitness
 
             '''# when we have multiple sets per fitness
             while len(weight_list) > 0 and len(winners) != 4:
                 choice = deepcopy(weight_list[0])  #Will pop off the agent at position 0 and remove it from weight_list automatically.
                 weight_list = weight_list[1:][:]
-
                 winners.append(choice)
-
                 count += 1
-
             best += 1'''
 
-        top_2 = deepcopy(parents[:2])                   #Top 2 agents, will be reproduced mutated and put in pool
+        top_2 = deepcopy(winners[:2])                   #Top 2 agents, will be reproduced mutated and put in pool
 
 
         ''''# -- Crossover --
         # Create 6 children total from the winner pool
-        # * 4 parents from the previous generation
+        # * 4 winners from the previous generation
         # * 3 offspring of randomly chosen 2 of the 4 winners
         # * 2 direct clones of top 2 winners
         # * 1 child of top 2 winners
         # * And a partridge in a pear tree'''
 
         #Start initializing children
-        #Start with the 4 parents that are going to be carried forward into the next generation
+        #Start with the 4 winners that are going to be carried forward into the next generation
 
-        children = [deepcopy(p) for p in parents]
+        children = [deepcopy(p) for p in winners]
+        
         if n_agents == 10:
             #Add offspring of top 2 winners
             children.append(mutate(crossover(top_2)))
@@ -333,8 +338,8 @@ def train_agent(n_agents=N_AGENTS, n_epochs=500, headless=True):
                 children.append(mutate(agent))
 
             for _ in range(4):
-                random.shuffle(parents)
-                children.append(mutate(crossover([parents[0], parents[1]])))
+                random.shuffle(winners)
+                children.append(mutate(crossover([winners[0], winners[1]])))
 
         #print('consistent best weights:', best_weights[0] == population[0])
         #print(len(best_weights[0]) == len(population[0]))
@@ -349,7 +354,8 @@ def train_agent(n_agents=N_AGENTS, n_epochs=500, headless=True):
         population = children
 
     # RETURN: The top agent of the last generation to undergo fitness evaluation
-    best_agent = parents[0]
+    best_agent = winners[0]
+
     print('best_agent', best_agent)
     #print('consistency:', best_weights[0] == best_agent)
 
@@ -408,6 +414,7 @@ if __name__ == '__main__':
     if not human_play:
         w = train_agent(headless=True)
         print(w)
+        literally_nothing = input('Press enter to continue with main() & observe behavior: ')
         main(w, headless=False)
 
     else:
