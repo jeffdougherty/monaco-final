@@ -3,6 +3,7 @@ import numpy as np
 from ple.games.flappybird import FlappyBird
 from ple import PLE
 from copy import deepcopy
+from statistics import mean
 
 import inspect
 
@@ -29,21 +30,20 @@ N_PARAMS = 8
 N_AGENTS = 10
 
 # Mutation 
-P_MUT = 0.5
-MUTATE_ALL = True
-MUT_MEAN = 0
+P_MUT = 0.5         #Probability of mutation
+MUTATE_ALL = True   #When mutation is rolled, apply to all genes, or just one?
+MUT_MEAN = 0        #Mean and SD of the normal distribution used for mutation
 MUT_SD = 1.2
 
-ALGO_TO_USE = 5  # 1 = Jeff,  2= Jessie's (article's)  3=Jeff's attempt at using r  5=article's with distance to next subtracted
+ALGO_TO_USE = 2
+# 1 = Distance in both X and Y 2 = Distance in Y only
 
 ACTION_MAP = {
     1: 119,
     0: None
 }
 
-
-DIST_MEAN = 0  # Mean of normal distribution
-DIST_SD = 1     # SD of normal distribution
+ALTER_SEED = True   #If true, use a different random seed for each generation
 
 PRINT_INDIV = False
 
@@ -96,7 +96,7 @@ def initialize(n_agents=N_AGENTS):
 
     for i in range(n_agents):
 
-        this_agent = [np.random.uniform(-1,1) for j in range(N_PARAMS)]
+        this_agent = [np.random.uniform(-1,1) for _ in range(N_PARAMS)]
         agents.append(this_agent)
         # agents.append(this_agent)
 
@@ -121,9 +121,6 @@ def eval_fitness(w, seed=SEED, headless=True):
     FLAPPYBIRD.rng.seed(seed)
 
     agent_score = 0
-    r_vals = []
-    dist_traveled = 0
-    iterations = 0
 
     while True:
 
@@ -136,33 +133,15 @@ def eval_fitness(w, seed=SEED, headless=True):
 
         reward = game.act(ACTION_MAP[action])
 
-        # Score: Pipes traversed * r, see notes
-        # center = abs(obs['next_pipe_top_y'] - obs['next_pipe_bottom_y'] / 2)
-        # target = obs['next_pipe_top_y'] + center
-
-        # player_success = 1 - abs(target - obs['player_y']) / target
-            
-        # r_vals.append(player_success)
-
-
-        # distance traveled - next_pipe_dist_to_player
-        dist_from_target = abs(get_target(x) - x[POS_Y])
-
         if reward > 0:
 
             agent_score += 1
-            print('SCORED', agent_score)
+            if PRINT_INDIV:
+                print('SCORED', agent_score)
 
-        elif reward == 0:
-
-            # dist_traveled += 0.01 
-            agent_score += (1.0 - dist_from_target)
-            # (rough estimate, normalized)
-
-        agent_score = np.mean(r_vals)
-
-    elif ALGO_TO_USE == 5:
-        pipe_proximity_score = 1.0 - x[2]  #Chancho's baseline algorithm
+    if ALGO_TO_USE == 1:
+        #Sense both X distance to next pipe and Y distance to a notional "target" halfway between the next pipe's top and bottom Y
+        pipe_proximity_score = 1.0 - x[2]
         agent_score += pipe_proximity_score
         target = get_target(x)
         dist_from_target = abs(target-x[0])
@@ -172,8 +151,8 @@ def eval_fitness(w, seed=SEED, headless=True):
             print("distance", dist_from_target, "distance score:", dist_from_target)
             print("agnent score:", agent_score)
 
-    elif ALGO_TO_USE == 7:
-        #agent_score -= x[2]  #Chancho's baseline algorithm with safe-zone sensing
+    elif ALGO_TO_USE == 2:
+        #Sense safe zone in Y only
         target = get_target(x)
         dist_from_target = abs(target-x[0])
         dist_score = 1-dist_from_target
@@ -184,7 +163,7 @@ def eval_fitness(w, seed=SEED, headless=True):
     return agent_score
 
 def get_target(x):
-    #print(x[4], x[3])
+    #Find point halfway between top and bottom Y
     safe_zone_normalized = x[4] - x[3]  # Relative proportion of top y - bottom y
     target = (safe_zone_normalized / 2) + x[3]
     if PRINT_INDIV:
@@ -207,13 +186,6 @@ def mutate(w):
     """
     Apply mutations to an agent's genome with probability 0.5
     """
-
-    '''for param in range(N_PARAMS - 1):
-        mut = random.uniform(0,1)
-        if mut <= P_MUT:
-            w[param] += np.random.normal(MUT_MEAN, MUT_SD)
-
-    return w'''
     mut = random.uniform(0,1)
     if not MUTATE_ALL:
         if mut <= P_MUT:
@@ -231,18 +203,16 @@ def mutate(w):
     
     return w
 
-def train_agent(n_agents=N_AGENTS, n_epochs=100, headless=True):
+def train_agent(n_agents=N_AGENTS, n_epochs=200, headless=True):
     """
     Train a flappy bird using a genetic algorithm
     """
-    # TODO: genetic algorithm steps below
 
-    res = open('training_results.txt', 'w')
+    res = open('training_results.csv', 'w')
 
     # --Initialization--
     population = initialize(n_agents)
 
-    #best_weights = []
     best_fitness = 0
     winners = []
 
@@ -250,14 +220,19 @@ def train_agent(n_agents=N_AGENTS, n_epochs=100, headless=True):
 
         # to evaluate fitness
         agent_dict = {}
-        fit_list = []
+        fit_list = []       #List of fitnesses used as indexes to agents for each generation
         winners = []        #Agents chosen to reproduce for next generation
+
+        if ALTER_SEED:
+            this_seed = np.random.randint(1, 10000)
+        else:
+            this_seed = SEED
 
         # Want both a way to sort fitness scores and a quick way
         # to find agent associated with that fitness score
         for w in population:
             # Fitness for this agent
-            w_fit = eval_fitness(w, headless=headless)
+            w_fit = eval_fitness(w, seed=this_seed, headless=headless)
             fit_list.append(w_fit)
             #print(w_fit, w)
 
@@ -277,12 +252,8 @@ def train_agent(n_agents=N_AGENTS, n_epochs=100, headless=True):
             if best_fitness < w_fit:
                 best_fitness = w_fit
                 best_weights = agent_dict[w_fit][:]
-                #print('best_fitness', best_fitness)
-                #print('best_weights', best_weights)
-                res.write('\n' + '*FITNESS  ' + str(best_fitness) + '\n\n')
-                res.write('\n' + '*WEIGHTS' + '\n' + str(best_weights) + '\n\n')
 
-            res.write(str(w) + '\n' + str(w_fit) + '\n')
+        fit_mean = mean(fit_list)
 
         fit_list.sort(reverse=True)  # Put fitness list in order
 
@@ -306,13 +277,6 @@ def train_agent(n_agents=N_AGENTS, n_epochs=100, headless=True):
 
             best += 1                                       #Agents get added to winners in order of fitness
 
-            '''# when we have multiple sets per fitness
-            while len(weight_list) > 0 and len(winners) != 4:
-                choice = deepcopy(weight_list[0])  #Will pop off the agent at position 0 and remove it from weight_list automatically.
-                weight_list = weight_list[1:][:]
-                winners.append(choice)
-                count += 1
-            best += 1'''
 
         top_2 = deepcopy(winners[:2])                   #Top 2 agents, will be reproduced mutated and put in pool
 
@@ -337,19 +301,19 @@ def train_agent(n_agents=N_AGENTS, n_epochs=100, headless=True):
             for agent in top_2:
                 children.append(mutate(agent))
 
+
             for _ in range(4):
                 random.shuffle(winners)
                 children.append(mutate(crossover([winners[0], winners[1]])))
-
-        #print('consistent best weights:', best_weights[0] == population[0])
-        #print(len(best_weights[0]) == len(population[0]))
-        #print('best_weights', best_weights)
 
 
         result_string = "Generation " + str(g) + " Best Score: " + str(fit_list[0]) + "\n"
 
         print(result_string)
-        res.write(result_string)
+
+        csv_string = str(g) + "," + str(fit_list[0]) + "," + str(fit_mean) +"\n"
+        res.write(csv_string)
+
 
         population = children
 
@@ -357,7 +321,6 @@ def train_agent(n_agents=N_AGENTS, n_epochs=100, headless=True):
     best_agent = winners[0]
 
     print('best_agent', best_agent)
-    #print('consistency:', best_weights[0] == best_agent)
 
     
     res.close()
@@ -389,7 +352,6 @@ def main(w, seed=SEED, headless=False):
 
         obs = game.getGameState()
         x = normalize(obs)
-        # print(obs)
         action = agent(x, w)
 
         reward = game.act(ACTION_MAP[action])
@@ -405,17 +367,21 @@ def main(w, seed=SEED, headless=False):
 
 if __name__ == '__main__':
     human_play = False
+    eval_agent = None
 
     # added bc population reaches equilibrium v fast (aka stops learning & can't improve)
 
     # np.random.seed(random.randint(0, 100))
     np.random.seed(1234)
 
-    if not human_play:
+    if not human_play and not eval_agent:
         w = train_agent(headless=True)
         print(w)
         literally_nothing = input('Press enter to continue with main() & observe behavior: ')
         main(w, headless=False)
+
+    elif not human_play:
+        main(eval_agent, headless=False)
 
     else:
         # For human play, use 'W' key to flap
